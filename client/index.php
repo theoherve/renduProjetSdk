@@ -1,16 +1,5 @@
 <?php
 
-define('OAUTH_CLIENT_ID', '621f59c71bc35');
-define('OAUTH_CLIENT_SECRET', '621f59c71bc36');
-
-//Facebook App ID
-define('FACEBOOK_CLIENT_ID', '1311135729390173');
-define('FACEBOOK_CLIENT_SECRET', 'fc5e25661fe961ab85d130779357541e');
-
-//Spotify App ID
-define('SPOTIFY_CLIENT_ID', '721c83af5d9f4aef8899309b6e7a7106');
-define('SPOTIFY_CLIENT_SECRET', 'f8df07860ea44b5197d0d008305b4209');
-
 function login(): void
 {
 	$queryParams= http_build_query([
@@ -131,7 +120,17 @@ function spotifyCallback(): void
         'client_secret' => SPOTIFY_CLIENT_SECRET,
         'redirect_uri' => 'http://localhost:8081/spotify_callback',
     ], $specifParams));
-	$response = file_get_contents("https://accounts.spotify.com/api/token");
+	
+	$context_options = array (
+		'http' => array (
+			'method' => 'POST',
+			'header'=> "Content-type: application/x-www-form-urlencoded\r\n"
+				. "Content-Length: " . strlen($queryParams) . "\r\n",
+			'content' => $queryParams
+		)
+	);
+	
+	$response = file_get_contents("https://accounts.spotify.com/api/token", false, stream_context_create($context_options));
 	$token = json_decode($response, true);
 	
 	$context = stream_context_create([
@@ -139,43 +138,12 @@ function spotifyCallback(): void
              'header' => "Authorization: Bearer {$token['access_token']}"
          ]
      ]);
-	$response = file_get_contents("https://graph.facebook.com/v2.10/me", false, $context);
+	$response = file_get_contents("https://api.spotify.com/v1/me", false, $context);
 	$user = json_decode($response, true);
-	echo "Hello {$user['email']}";
+	echo "Hello {$user['email']} {$user['display_name']}";
 	
-	
-	echo "
-<script>
-	app.get('/callback', function(req, res) {
-		
-	  var code = req.query.code || null;
-	  var state = req.query.state || null;
-	
-	  if (state === null) {
-	    res.redirect('/#' +
-	      querystring.stringify({
-	        error: 'state_mismatch'
-	      }));
-	  } else {
-	    var authOptions = {
-	      url: 'https://accounts.spotify.com/api/token',
-	      form: {
-	        code: code,
-	        redirect_uri: redirect_uri,
-	        grant_type: 'authorization_code'
-	      },
-	      headers: {
-	        'Authorization': 'Basic ' + (new Buffer(client_id + ':' + client_secret).toString('base64'))
-	      },
-	      json: true
-	    };
-	  }
-	});
-</script>
-	
-	";
-	
-	
+//	return new user($user['email'], $user['id']);
+
 }
 
 $route = $_SERVER["REQUEST_URI"];
