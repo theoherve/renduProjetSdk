@@ -2,112 +2,197 @@
 
 define('OAUTH_CLIENT_ID', '621f59c71bc35');
 define('OAUTH_CLIENT_SECRET', '621f59c71bc36');
+
+//Facebook App ID
 define('FACEBOOK_CLIENT_ID', '1311135729390173');
 define('FACEBOOK_CLIENT_SECRET', 'fc5e25661fe961ab85d130779357541e');
 
-function login()
+//Spotify App ID
+define('SPOTIFY_CLIENT_ID', '721c83af5d9f4aef8899309b6e7a7106');
+define('SPOTIFY_CLIENT_SECRET', 'f8df07860ea44b5197d0d008305b4209');
+
+function login(): void
 {
-    $queryParams= http_build_query([
-        'client_id' => OAUTH_CLIENT_ID,
-        'redirect_uri' => 'http://localhost:8081/callback',
-        'response_type' => 'code',
-        'scope' => 'basic',
-        "state" => bin2hex(random_bytes(16))
-    ]);
-    echo "
+	$queryParams= http_build_query([
+       'client_id' => OAUTH_CLIENT_ID,
+       'redirect_uri' => 'http://localhost:8081/callback',
+       'response_type' => 'code',
+       'scope' => 'basic',
+       "state" => bin2hex(random_bytes(16))
+   ]);
+	echo "
         <form action='/callback' method='post'>
             <input type='text' name='username'/>
             <input type='password' name='password'/>
             <input type='submit' value='Login'/>
         </form>
     ";
-    echo "<a href=\"http://localhost:8080/auth?{$queryParams}\">Login with OauthServer</a>";
-    $queryParams= http_build_query([
-        'client_id' => FACEBOOK_CLIENT_ID,
-        'redirect_uri' => 'http://localhost:8081/fb_callback',
-        'response_type' => 'code',
-        'scope' => 'public_profile,email',
-        "state" => bin2hex(random_bytes(16))
-    ]);
-    echo "<a href=\"https://www.facebook.com/v2.10/dialog/oauth?{$queryParams}\">Login with Facebook</a>";
+	echo "<a href=\"http://localhost:8080/auth?{$queryParams}\">Login with OauthServer</a><br><br>";
+	
+	//Facebook login
+	$queryParams= http_build_query([
+       'client_id' => FACEBOOK_CLIENT_ID,
+       'redirect_uri' => 'http://localhost:8081/fb_callback',
+       'response_type' => 'code',
+       'scope' => 'public_profile, email',
+       "state" => bin2hex(random_bytes(16))
+   ]);
+	echo "<a href=\"https://www.facebook.com/v2.10/dialog/oauth?{$queryParams}\">Login with Facebook</a><br><br>";
+	
+	//Spotify login
+	$queryParams= http_build_query([
+       'client_id' => SPOTIFY_CLIENT_ID,
+       'redirect_uri' => 'http://localhost:8081/spotify_callback',
+       'response_type' => 'code',
+       'show_dialog' => 'true', //not necessary, but useful for debugging
+       'scope' => 'user-read-email',
+       "state" => bin2hex(random_bytes(16))
+   ]);
+	echo "<a href=\"https://accounts.spotify.com/authorize?{$queryParams}\">Login with Spotify</a><br><br>";
 }
 
 // Exchange code for token then get user info
-function callback()
+function callback(): void
 {
-    if ($_SERVER["REQUEST_METHOD"] == "POST") {
-        ["username" => $username, "password" => $password] = $_POST;
-        $specifParams = [
-            'username' => $username,
-            'password' => $password,
-            'grant_type' => 'password',
-        ];
-    } else {
-        ["code" => $code, "state" => $state] = $_GET;
-
-        $specifParams = [
-            'code' => $code,
-            'grant_type' => 'authorization_code',
-        ];
-    }
-
-    $queryParams = http_build_query(array_merge([
+	if ($_SERVER["REQUEST_METHOD"] == "POST") {
+		["username" => $username, "password" => $password] = $_POST;
+		$specifParams = [
+			'username' => $username,
+			'password' => $password,
+			'grant_type' => 'password',
+		];
+	} else {
+		["code" => $code, "state" => $state] = $_GET;
+		
+		$specifParams = [
+			'code' => $code,
+			'grant_type' => 'authorization_code',
+		];
+	}
+	
+	$queryParams = http_build_query(array_merge([
         'client_id' => OAUTH_CLIENT_ID,
         'client_secret' => OAUTH_CLIENT_SECRET,
         'redirect_uri' => 'http://localhost:8081/callback',
     ], $specifParams));
-    $response = file_get_contents("http://server:8080/token?{$queryParams}");
-    $token = json_decode($response, true);
-    
-    $context = stream_context_create([
-        'http' => [
-            'header' => "Authorization: Bearer {$token['access_token']}"
-            ]
-        ]);
-    $response = file_get_contents("http://server:8080/me", false, $context);
-    $user = json_decode($response, true);
-    echo "Hello {$user['lastname']} {$user['firstname']}";
+	$response = file_get_contents("http://server:8080/token?{$queryParams}");
+	$token = json_decode($response, true);
+	
+	$context = stream_context_create([
+         'http' => [
+             'header' => "Authorization: Bearer {$token['access_token']}"
+         ]
+    ]);
+	$response = file_get_contents("http://server:8080/me", false, $context);
+	$user = json_decode($response, true);
+	echo "Hello {$user['lastname']} {$user['firstname']}";
 }
 
-function fbcallback()
+//Facebook callback
+function fbcallback(): void
 {
-    ["code" => $code, "state" => $state] = $_GET;
-
-    $specifParams = [
-            'code' => $code,
-            'grant_type' => 'authorization_code',
-        ];
-
-    $queryParams = http_build_query(array_merge([
+	["code" => $code, "state" => $state] = $_GET;
+	
+	$specifParams = [
+		'code' => $code,
+		'grant_type' => 'authorization_code',
+	];
+	
+	$queryParams = http_build_query(array_merge([
         'client_id' => FACEBOOK_CLIENT_ID,
         'client_secret' => FACEBOOK_CLIENT_SECRET,
         'redirect_uri' => 'http://localhost:8081/fb_callback',
     ], $specifParams));
-    $response = file_get_contents("https://graph.facebook.com/v2.10/oauth/access_token?{$queryParams}");
-    $token = json_decode($response, true);
-    
-    $context = stream_context_create([
-        'http' => [
-            'header' => "Authorization: Bearer {$token['access_token']}"
-            ]
-        ]);
-    $response = file_get_contents("https://graph.facebook.com/v2.10/me", false, $context);
-    $user = json_decode($response, true);
-    echo "Hello {$user['name']}";
+	$response = file_get_contents("https://graph.facebook.com/v2.10/oauth/access_token?{$queryParams}");
+	$token = json_decode($response, true);
+	
+	$context = stream_context_create([
+         'http' => [
+             'header' => "Authorization: Bearer {$token['access_token']}"
+         ]
+     ]);
+	$response = file_get_contents("https://accounts.spotify.com/me", false, $context);
+	$user = json_decode($response, true);
+	echo "Hello {$user['name']}";
+}
+
+//Facebook callback
+function spotifyCallback(): void
+{
+	["code" => $code, "state" => $state] = $_GET;
+	
+	$specifParams = [
+		'code' => $code,
+		'grant_type' => 'authorization_code',
+	];
+	
+	$queryParams = http_build_query(array_merge([
+        'client_id' => SPOTIFY_CLIENT_ID,
+        'client_secret' => SPOTIFY_CLIENT_SECRET,
+        'redirect_uri' => 'http://localhost:8081/spotify_callback',
+    ], $specifParams));
+	$response = file_get_contents("https://accounts.spotify.com/api/token");
+	$token = json_decode($response, true);
+	
+	$context = stream_context_create([
+         'http' => [
+             'header' => "Authorization: Bearer {$token['access_token']}"
+         ]
+     ]);
+	$response = file_get_contents("https://graph.facebook.com/v2.10/me", false, $context);
+	$user = json_decode($response, true);
+	echo "Hello {$user['email']}";
+	
+	
+	echo "
+<script>
+	app.get('/callback', function(req, res) {
+		
+	  var code = req.query.code || null;
+	  var state = req.query.state || null;
+	
+	  if (state === null) {
+	    res.redirect('/#' +
+	      querystring.stringify({
+	        error: 'state_mismatch'
+	      }));
+	  } else {
+	    var authOptions = {
+	      url: 'https://accounts.spotify.com/api/token',
+	      form: {
+	        code: code,
+	        redirect_uri: redirect_uri,
+	        grant_type: 'authorization_code'
+	      },
+	      headers: {
+	        'Authorization': 'Basic ' + (new Buffer(client_id + ':' + client_secret).toString('base64'))
+	      },
+	      json: true
+	    };
+	  }
+	});
+</script>
+	
+	";
+	
+	
 }
 
 $route = $_SERVER["REQUEST_URI"];
 switch (strtok($route, "?")) {
-    case '/login':
-        login();
-        break;
-    case '/callback':
-        callback();
-        break;
-    case '/fb_callback':
-        fbcallback();
-        break;
-    default:
-        http_response_code(404);
-        break;
+	case '/login':
+		login();
+		break;
+	case '/callback':
+		callback();
+		break;
+	case '/fb_callback':
+		fbcallback();
+		break;
+	case '/spotify_callback':
+		spotifyCallback();
+		break;
+	default:
+		http_response_code(404);
+		break;
 }
