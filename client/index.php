@@ -117,7 +117,7 @@ function fbcallback(): void
 	echo "Hello {$user['name']}";
 }
 
-//Facebook callback
+//Spotify callback
 function spotifyCallback(): void
 {
 	["code" => $code, "state" => $state] = $_GET;
