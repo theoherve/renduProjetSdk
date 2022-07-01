@@ -87,5 +87,15 @@ class Provider{
             "state" => bin2hex(random_bytes(16))
         ]);
 	}
+
+    public function getMe($token, $urlMe) {
+        $context = stream_context_create([
+            'http' => [
+                'header' => "Authorization: Bearer {$token['access_token']}"
+            ]
+        ]);
+        $response = file_get_contents( $urlMe, false, $context);
+        return new User(json_decode($response, true));
+    }
 	
 }
