@@ -1,6 +1,6 @@
 <?php
 
-abstract class Provider{
+class Provider{
 	private $clientID = null;
 	private $clientSecret = null;
 	private $redirectUri = null;
