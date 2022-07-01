@@ -1,21 +1,14 @@
 <?php
-//require(".env.php");
+require(".env.php");
 require("./class/Provider.class.php");
 require("./class/User.class.php");
 require("./class/SpotifyProvider.class.php");
 require("./class/DiscordProvider.class.php");
-
+require("./class/OauthProvider.class.php");
+require("./class/FacebookProvider.class.php");
 
 function login(): void
 {
-  //OAuth login
-	$queryParams= http_build_query([
-       'client_id' => OAUTH_CLIENT_ID,
-       'redirect_uri' => 'http://localhost:8081/callback',
-       'response_type' => 'code',
-       'scope' => 'basic',
-       "state" => bin2hex(random_bytes(16))
-   ]);
 	echo "
         <form action='/callback' method='post'>
             <input type='text' name='username'/>
@@ -23,17 +16,12 @@ function login(): void
             <input type='submit' value='Login'/>
         </form>
     ";
-	echo "<a href=\"http://localhost:8080/auth?{$queryParams}\">Login with OauthServer</a><br><br>";
+	
+	//OAuth login
+	echo "<a href=\"http://localhost:8080/auth?" . OauthProvider::Oauth()->buildQuery() . "\">Login with OauthServer</a><br><br>";
 	
 	//Facebook login
-	$queryParams= http_build_query([
-       'client_id' => FACEBOOK_CLIENT_ID,
-       'redirect_uri' => 'http://localhost:8081/fb_callback',
-       'response_type' => 'code',
-       'scope' => 'public_profile, email',
-       "state" => bin2hex(random_bytes(16))
-   ]);
-	echo "<a href=\"https://www.facebook.com/v2.10/dialog/oauth?{$queryParams}\">Login with Facebook</a><br><br>";
+	echo "<a href=\"https://www.facebook.com/v2.10/dialog/oauth?" . FacebookProvider::Facebook()->buildQuery() . "\">Login with Facebook</a><br><br>";
 	
 	//Spotify login
 	echo "<a href=\"https://accounts.spotify.com/authorize?" . SpotifyProvider::Spotify()->buildQuery() . "\">Login with Spotify</a><br><br>";
@@ -42,82 +30,18 @@ function login(): void
     echo "<a href=\"https://discord.com/api/oauth2/authorize?" . DiscordProvider::Discord()->buildQuery() . "\">Login with Discord</a>";
 }
 
-// Exchange code for token then get user info
-function callback(): void
-{
-	if ($_SERVER["REQUEST_METHOD"] == "POST") {
-		["username" => $username, "password" => $password] = $_POST;
-		$specifParams = [
-			'username' => $username,
-			'password' => $password,
-			'grant_type' => 'password',
-		];
-	} else {
-		["code" => $code, "state" => $state] = $_GET;
-		
-		$specifParams = [
-			'code' => $code,
-			'grant_type' => 'authorization_code',
-		];
-	}
-	
-	$queryParams = http_build_query(array_merge([
-        'client_id' => OAUTH_CLIENT_ID,
-        'client_secret' => OAUTH_CLIENT_SECRET,
-        'redirect_uri' => 'http://localhost:8081/callback',
-    ], $specifParams));
-	$response = file_get_contents("http://server:8080/token?{$queryParams}");
-	$token = json_decode($response, true);
-	
-	$context = stream_context_create([
-         'http' => [
-             'header' => "Authorization: Bearer {$token['access_token']}"
-         ]
-    ]);
-	$response = file_get_contents("http://server:8080/me", false, $context);
-	$user = json_decode($response, true);
-	echo "Hello {$user['lastname']} {$user['firstname']}";
-}
-
-//Facebook callback
-function fbcallback(): void
-{
-	["code" => $code, "state" => $state] = $_GET;
-	
-	$specifParams = [
-		'code' => $code,
-		'grant_type' => 'authorization_code',
-	];
-	
-	$queryParams = http_build_query(array_merge([
-        'client_id' => FACEBOOK_CLIENT_ID,
-        'client_secret' => FACEBOOK_CLIENT_SECRET,
-        'redirect_uri' => 'http://localhost:8081/fb_callback',
-    ], $specifParams));
-	
-	$response = file_get_contents("https://graph.facebook.com/v2.10/oauth/access_token?{$queryParams}");
-	$token = json_decode($response, true);
-	
-	$context = stream_context_create([
-         'http' => [
-             'header' => "Authorization: Bearer {$token['access_token']}"
-         ]
-     ]);
-	$response = file_get_contents("https://graph.facebook.com/v2.10/me", false, $context);
-	$user = json_decode($response, true);
-	echo "Hello {$user['name']}";
-}
-
 $route = $_SERVER["REQUEST_URI"];
 switch (strtok($route, "?")) {
 	case '/login':
 		login();
 		break;
 	case '/callback':
-		callback();
+		$user = OauthProvider::Oauth()->callback();
+		print_r($user->getData());
 		break;
 	case '/fb_callback':
-		fbcallback();
+		$user = FacebookProvider::Facebook()->callback();
+		print_r($user->getData());
 		break;
 	case '/spotify_callback':
         $user = SpotifyProvider::Spotify()->callback();

@@ -8,9 +8,9 @@ class Provider{
 	private $method = null;
 	private $tokenUrl = null;
 	private $urlMe = null;
+	private $grantType;
 	
-	public function __construct($clientID, $clientSecret, $redirectUri, $scope, $method, $tokenUrl, $urlMe)
-	{
+	public function __construct($clientID, $clientSecret, $redirectUri, $scope, $method, $tokenUrl, $urlMe, $grantType = "authorization_code"){
 		$this->clientID = $clientID;
 		$this->clientSecret = $clientSecret;
 		$this->redirectUri = $redirectUri;
@@ -18,6 +18,7 @@ class Provider{
 		$this->method = $method;
 		$this->tokenUrl = $tokenUrl;
 		$this->urlMe = $urlMe;
+		$this->grantType = $grantType;
 	}
 	
 	/**
@@ -116,6 +117,24 @@ class Provider{
 		return $this->urlMe;
 	}
 	
+	/**
+	 * @return mixed|string
+	 */
+	public function getGrantType(): mixed
+	{
+		return $this->grantType;
+	}
+	
+	/**
+	 * @param mixed|string $grantType
+	 */
+	public function setGrantType(mixed $grantType): void
+	{
+		$this->grantType = $grantType;
+	}
+	
+	
+	
 	public function buildQuery(){
 		return http_build_query([
             'client_id' => $this->getClientID(),
@@ -127,12 +146,21 @@ class Provider{
 	}
 	
 	public function getToken($method, $urlToken){
-		["code" => $code, "state" => $state] = $_GET;
 		
-		$specifParams = [
-			'code' => $code,
-			'grant_type' => 'authorization_code',
-		];
+		if($this->grantType == "authorization_code"){
+			["code" => $code, "state" => $state] = $_GET;
+			$specifParams = [
+				'code' => $code,
+				'grant_type' => 'authorization_code',
+			];
+		}else{
+			["username" => $username, "password" => $password] = $_POST;
+			$specifParams = [
+				'username' => $username,
+				'password' => $password,
+				'grant_type' => 'password',
+			];
+		}
 		
 		$queryParams = http_build_query(array_merge([
             'client_id' => $this->getClientID(),
