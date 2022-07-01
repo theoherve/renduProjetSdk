@@ -3,15 +3,17 @@
 class Provider{
 	private $clientID = null;
 	private $clientSecret = null;
+	private $redirectUri = null;
 	private $scope = null;
 	private $method = null;
 	private $tokenUrl = null;
 	private $urlMe = null;
 	
-	public function __construct($clientID, $clientSecret, $scope, $method, $tokenUrl, $urlMe)
+	public function __construct($clientID, $clientSecret, $redirectUri, $scope, $method, $tokenUrl, $urlMe)
 	{
 		$this->clientID = $clientID;
 		$this->clientSecret = $clientSecret;
+		$this->redirectUri = $redirectUri;
 		$this->scope = $scope;
 		$this->method = $method;
 		$this->tokenUrl = $tokenUrl;
@@ -49,6 +51,14 @@ class Provider{
 	{
 		return $this->clientSecret;
 	}
+
+    /**
+     * @return null
+     */
+    public function getRedirectUri()
+    {
+        return $this->redirectUri;
+    }
 	
 	/**
 	 * @return null
@@ -109,7 +119,7 @@ class Provider{
 	public function buildQuery(){
 		return http_build_query([
             'client_id' => $this->getClientID(),
-            'redirect_uri' => "http://localhost:8081/callback",
+            'redirect_uri' => $this->redirectUri,
             'response_type' => 'code',
             'scope' => $this->getScope(),
             "state" => bin2hex(random_bytes(16))
@@ -127,7 +137,7 @@ class Provider{
 		$queryParams = http_build_query(array_merge([
             'client_id' => $this->getClientID(),
             'client_secret' => $this->getClientSecret(),
-            'redirect_uri' => 'http://localhost:8081/callback',
+            'redirect_uri' => $this->redirectUri,
         ], $specifParams));
 		
 		if($method === "POST"){
