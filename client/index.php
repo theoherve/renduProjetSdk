@@ -1,5 +1,9 @@
 <?php
-require(".env.php");
+//require(".env.php");
+require("./class/Provider.class.php");
+require("./class/User.class.php");
+require("./class/SpotifyProvider.class.php");
+
 
 function login(): void
 {
@@ -31,15 +35,7 @@ function login(): void
 	echo "<a href=\"https://www.facebook.com/v2.10/dialog/oauth?{$queryParams}\">Login with Facebook</a><br><br>";
 	
 	//Spotify login
-	$queryParams= http_build_query([
-       'client_id' => SPOTIFY_CLIENT_ID,
-       'redirect_uri' => 'http://localhost:8081/spotify_callback',
-       'response_type' => 'code',
-       'show_dialog' => 'true', //not necessary, but useful for debugging
-       'scope' => 'user-read-email',
-       "state" => bin2hex(random_bytes(16))
-   ]);
-	echo "<a href=\"https://accounts.spotify.com/authorize?{$queryParams}\">Login with Spotify</a><br><br>";
+	echo "<a href=\"https://accounts.spotify.com/authorize?" . SpotifyProvider::Spotify()->buildQuery() . "\">Login with Spotify</a><br><br>";
   
   //Discord login
   $queryParams= http_build_query([
@@ -201,7 +197,8 @@ switch (strtok($route, "?")) {
 		login();
 		break;
 	case '/callback':
-		callback();
+		$user = SpotifyProvider::Spotify()->callback();
+		print_r($user->getData());
 		break;
 	case '/fb_callback':
 		fbcallback();
