@@ -104,6 +104,7 @@ function fbcallback(): void
         'client_secret' => FACEBOOK_CLIENT_SECRET,
         'redirect_uri' => 'http://localhost:8081/fb_callback',
     ], $specifParams));
+	
 	$response = file_get_contents("https://graph.facebook.com/v2.10/oauth/access_token?{$queryParams}");
 	$token = json_decode($response, true);
 	
@@ -112,7 +113,7 @@ function fbcallback(): void
              'header' => "Authorization: Bearer {$token['access_token']}"
          ]
      ]);
-	$response = file_get_contents("https://accounts.spotify.com/me", false, $context);
+	$response = file_get_contents("https://graph.facebook.com/v2.10/me", false, $context);
 	$user = json_decode($response, true);
 	echo "Hello {$user['name']}";
 }
