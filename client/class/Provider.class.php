@@ -88,4 +88,39 @@ class Provider{
         ]);
 	}
 	
+	public function getToken($method, $urlToken){
+		
+		["code" => $code, "state" => $state] = $_GET;
+		
+		$specifParams = [
+			'code' => $code,
+			'grant_type' => 'authorization_code',
+		];
+		
+		$queryParams = http_build_query(array_merge([
+            'client_id' => $this->getClientID(),
+            'client_secret' => $this->getClientSecret(),
+            'redirect_uri' => 'http://localhost:8081/callback',
+        ], $specifParams));
+		
+		if($method === "POST"){
+			$context_options = array (
+				'http' => array (
+					'method' => 'POST',
+					'header'=> "Content-type: application/x-www-form-urlencoded\r\n"
+						. "Content-Length: " . strlen($queryParams) . "\r\n",
+					'content' => $queryParams
+				)
+			);
+			
+			$response = file_get_contents($urlToken, false, stream_context_create($context_options));
+		}else if($method === "GET"){
+			$response = file_get_contents($urlToken . {$queryParams});
+		}else
+			"wrong method";
+		
+		return json_decode($response, true);
+	
+	}
+	
 }
