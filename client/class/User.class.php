@@ -9,11 +9,15 @@ class User{
     }
 
     /**
-     * @return mixed
+     * @return array
      */
-    public function getData(): mixed
+    public function getData(...$params): array
     {
-        return $this->data;
+		$return = [];
+	    foreach($params as $param){
+			$return[$param] = $this->data[$param];
+		}
+        return $return;
     }
 
     /**
@@ -23,6 +27,5 @@ class User{
     {
         $this->data = json_decode($data, true);;
     }
-
-
+	
 }

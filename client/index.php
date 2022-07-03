@@ -45,11 +45,11 @@ switch (strtok($route, "?")) {
 		break;
 	case '/spotify_callback':
         $user = SpotifyProvider::Spotify()->callback();
-        print_r($user->getData());
+        print_r($user->getData("display_name", "email"));
 		break;
   case '/discord_callback':
       $user = DiscordProvider::Discord()->callback();
-      print_r($user->getData());
+      print_r($user->getData("username", "email"));
       break;
 	default:
 		http_response_code(404);
